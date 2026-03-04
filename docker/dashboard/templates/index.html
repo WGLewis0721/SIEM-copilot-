@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNAP AI SIEM Copilot — Security Reports</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --border: #2d3148;
+            --accent: #4f6ef7;
+            --accent-hover: #6b85ff;
+            --text: #e2e8f0;
+            --text-muted: #8892a4;
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --orange: #f97316;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        header .badge {
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        header .updated {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .alert {
+            background: #7c2d12;
+            border: 1px solid #ea580c;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            color: #fed7aa;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .stat-card .label {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        h2 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .report-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .report-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .report-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .report-card.active {
+            border-color: var(--accent);
+            background: #1e2235;
+        }
+
+        .report-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .report-id {
+            font-size: 12px;
+            font-family: monospace;
+            background: var(--bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+
+        .report-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .report-meta span { display: flex; align-items: center; gap: 4px; }
+
+        .rag-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .rag-on { background: #14532d; color: var(--green); }
+        .rag-off { background: #3b1515; color: var(--red); }
+
+        .report-preview {
+            color: var(--text-muted);
+            font-size: 13px;
+            border-left: 3px solid var(--border);
+            padding-left: 12px;
+            margin-top: 10px;
+            line-height: 1.7;
+        }
+
+        /* Report Detail Panel */
+        .report-detail {
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .report-detail h2 {
+            font-size: 18px;
+            color: var(--text);
+            margin-bottom: 16px;
+            text-transform: none;
+        }
+
+        .analysis-body {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            line-height: 1.7;
+        }
+
+        .citations {
+            margin-top: 16px;
+        }
+
+        .citations h3 {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .citation-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .citation-score {
+            margin-left: auto;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <header>
+        <span>🛡️</span>
+        <h1>CNAP AI SIEM Copilot</h1>
+        <span class="badge">Report Viewer</span>
+        <span class="updated">Last refreshed: {{ last_updated }}</span>
+    </header>
+
+    <div class="container">
+
+        {% if error %}
+        <div class="alert">⚠️ {{ error }}</div>
+        {% endif %}
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="label">Total Reports</div>
+                <div class="value">{{ reports | length }}</div>
+            </div>
+            {% if reports %}
+            <div class="stat-card">
+                <div class="label">Latest Analysis</div>
+                <div class="value" style="font-size:18px">{{ reports[0].timestamp[:16].replace('T', ' ') }} UTC</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Logs in Latest</div>
+                <div class="value">{{ reports[0].log_count | default(0) | int }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">RAG Citations</div>
+                <div class="value">{{ reports[0].citation_count | default(0) }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Report Detail (if selected) -->
+        {% if report %}
+        <div class="report-detail">
+            <h2>📋 Report: {{ report.analysis_id }}</h2>
+            <div class="report-meta">
+                <span>🕐 {{ report.timestamp }}</span>
+                <span>📊 {{ report.log_count }} log events</span>
+                <span>⏱️ {{ report.duration_seconds | round(1) }}s analysis time</span>
+                <span class="rag-badge {{ 'rag-on' if report.rag_enabled else 'rag-off' }}">
+                    RAG {{ 'ENABLED' if report.rag_enabled else 'DISABLED' }}
+                </span>
+            </div>
+
+            <div class="analysis-body">{{ report.analysis }}</div>
+
+            {% if report.citations %}
+            <div class="citations">
+                <h3>📚 Knowledge Base Citations</h3>
+                {% for citation in report.citations %}
+                <div class="citation-item">
+                    <span>📄</span>
+                    <span>{{ citation.source }}</span>
+                    <span class="citation-score">relevance: {{ "%.2f" | format(citation.score) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Reports List -->
+        <h2>Analysis Reports</h2>
+
+        {% if reports %}
+        <div class="report-list">
+            {% for r in reports %}
+            <div class="report-card {% if report and report.analysis_id == r.id %}active{% endif %}"
+                 onclick="location.href='/report/{{ r.id }}'">
+                <div class="report-header">
+                    <span class="report-id">{{ r.id }}</span>
+                    <span class="rag-badge {{ 'rag-on' if r.rag_enabled else 'rag-off' }}">
+                        RAG {{ 'ON' if r.rag_enabled else 'OFF' }}
+                    </span>
+                </div>
+                <div class="report-meta">
+                    <span>🕐 {{ r.timestamp }}</span>
+                    <span>📊 {{ r.log_count }} events</span>
+                    <span>⏱️ {{ r.duration_seconds }}s</span>
+                    <span>📚 {{ r.citation_count }} citations</span>
+                </div>
+                <div class="report-preview">{{ r.analysis_preview }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No reports found in <code>{{ output_dir }}</code></p>
+            <p>The RAG agent generates reports every 30 minutes.</p>
+            <p>Check <code>docker compose logs rag-agent</code> if this persists.</p>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // Auto-refresh every 5 minutes
+        setTimeout(() => location.reload(), 5 * 60 * 1000);
+    </script>
+</body>
+</html>

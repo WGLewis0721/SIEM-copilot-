@@ -1,0 +1,25 @@
+# =============================================================================
+# CNAP AI SIEM Copilot — Terraform Variable Values Example
+# Copy this file to terraform.tfvars and fill in your values.
+# NEVER commit terraform.tfvars — it is in .gitignore
+# =============================================================================
+
+# Required — customize these for your environment
+aws_region          = "us-gov-west-1"
+vpc_id              = "vpc-REPLACE_WITH_YOUR_VPC_ID"
+subnet_id           = "subnet-REPLACE_WITH_YOUR_SUBNET_ID"
+opensearch_endpoint = "vpc-REPLACE_WITH_YOUR_OPENSEARCH_ENDPOINT.us-gov-west-1.es.amazonaws.com"
+
+# Deployment settings
+environment   = "prod"
+project_name  = "cnap-ai-siem"
+instance_type = "g4dn.xlarge"   # Change to "t3.xlarge" for CPU-only
+enable_gpu    = true             # Set false if using t3.xlarge
+
+# Optional
+owner_tag              = "your-team-name"
+ssh_key_name           = ""      # Leave empty to disable SSH (recommended)
+ebs_volume_size_gb     = 100
+s3_backup_retention_days = 90
+rag_interval_minutes   = 30
+time_range_hours       = 720

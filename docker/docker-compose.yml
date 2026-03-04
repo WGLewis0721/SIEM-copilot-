@@ -1,0 +1,203 @@
+# =============================================================================
+# CNAP AI SIEM Copilot — Docker Compose Orchestration
+# All services run on an isolated bridge network (no external ports exposed)
+# Access via SSM Session Manager port forwarding only
+# =============================================================================
+
+version: "3.9"
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Ollama — Local LLM runtime (llama3.1:8b + nomic-embed-text)
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_MAX_LOADED_MODELS=2
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - ai-siem-network
+    # GPU runtime — comment out the `deploy` block for CPU-only instances
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 14G
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # RAG Agent — Automated 30-minute security log analysis
+  # ---------------------------------------------------------------------------
+  rag-agent:
+    build:
+      context: ./rag-agent
+      dockerfile: Dockerfile
+    container_name: rag-agent
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OPENSEARCH_ENDPOINT=${OPENSEARCH_ENDPOINT}
+      - OPENSEARCH_INDICES=${OPENSEARCH_INDICES:-cwl-*,appgate-logs-*,security-logs-*}
+      - AWS_REGION=${AWS_REGION:-us-gov-west-1}
+      - S3_KNOWLEDGE_BUCKET=${S3_KNOWLEDGE_BUCKET}
+      - S3_BACKUP_BUCKET=${S3_BACKUP_BUCKET}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MODEL_NAME=${MODEL_NAME:-llama3.1:8b}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
+      - TIME_RANGE_HOURS=${TIME_RANGE_HOURS:-720}
+      - INTERVAL_MINUTES=${INTERVAL_MINUTES:-30}
+      - ENABLE_RAG=${ENABLE_RAG:-true}
+      - RAG_TOP_K=${RAG_TOP_K:-3}
+      - OUTPUT_DIR=/app/output
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - rag-output:/app/output
+      # Mount AWS CLI config (populated automatically by instance profile)
+      - /home/ubuntu/.aws:/root/.aws:ro
+    networks:
+      - ai-siem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/output') else 1)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ---------------------------------------------------------------------------
+  # Open WebUI — Interactive chat interface with OpenSearch filter functions
+  # ---------------------------------------------------------------------------
+  open-webui:
+    build:
+      context: ./open-webui
+      dockerfile: Dockerfile
+    container_name: open-webui
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"  # Only bind to localhost — access via SSM port forward
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=true
+      - WEBUI_NAME=CNAP AI SIEM Copilot
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-change-me-to-a-random-64-char-string}
+      - WEBUI_SESSION_COOKIE_SAME_SITE=strict
+      - WEBUI_SESSION_COOKIE_SECURE=false  # true when behind TLS proxy
+      - OPENSEARCH_ENDPOINT=${OPENSEARCH_ENDPOINT}
+      - AWS_REGION=${AWS_REGION:-us-gov-west-1}
+      - TIME_RANGE_HOURS=${TIME_RANGE_HOURS:-720}
+      - DATA_DIR=/app/backend/data
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - openwebui-data:/app/backend/data
+      - rag-output:/app/backend/data/outputs:ro  # Read RAG reports
+      - /home/ubuntu/.aws:/root/.aws:ro
+    networks:
+      - ai-siem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ---------------------------------------------------------------------------
+  # Dashboard — Read-only Flask report viewer
+  # ---------------------------------------------------------------------------
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"  # Only bind to localhost — access via SSM port forward
+    environment:
+      - OUTPUT_DIR=/app/data/outputs
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - rag-output:/app/data/outputs:ro  # Read-only access to reports
+    networks:
+      - ai-siem-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+# =============================================================================
+# Named Volumes — persistent data survives container restarts
+# =============================================================================
+volumes:
+  ollama-data:
+    name: ollama-data
+  openwebui-data:
+    name: openwebui-data
+  rag-output:
+    name: rag-output
+
+# =============================================================================
+# Networks — isolated bridge network, no external connectivity
+# =============================================================================
+networks:
+  ai-siem-network:
+    name: ai-siem-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

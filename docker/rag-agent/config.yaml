@@ -1,0 +1,38 @@
+# =============================================================================
+# CNAP AI SIEM Copilot — RAG Agent Configuration
+# Override any value with environment variables (env vars take precedence)
+# =============================================================================
+
+opensearch:
+  endpoint: ""                             # Set via OPENSEARCH_ENDPOINT env var
+  indices: "cwl-*,appgate-logs-*,security-logs-*"
+  use_iam_auth: true
+  timeout_seconds: 30
+  max_results: 500
+
+aws:
+  region: "us-gov-west-1"                  # Set via AWS_REGION env var
+
+ollama:
+  base_url: "http://ollama:11434"          # Set via OLLAMA_BASE_URL env var
+  model_name: "llama3.1:8b"               # Set via MODEL_NAME env var
+  embedding_model: "nomic-embed-text"      # Set via EMBEDDING_MODEL env var
+
+s3:
+  knowledge_bucket: ""                     # Set via S3_KNOWLEDGE_BUCKET env var
+  backup_bucket: ""                        # Set via S3_BACKUP_BUCKET env var
+
+analysis:
+  time_range_hours: 720                    # 30 days; Set via TIME_RANGE_HOURS
+  interval_minutes: 30                     # Analysis frequency; Set via INTERVAL_MINUTES
+  max_results: 500                         # Max log events per analysis run
+
+rag:
+  enabled: true                            # Set via ENABLE_RAG (true/false)
+  top_k: 3                                 # Context docs to retrieve; Set via RAG_TOP_K
+
+output:
+  dir: "/app/output"                       # Set via OUTPUT_DIR env var
+
+logging:
+  level: "INFO"                            # Set via LOG_LEVEL (DEBUG/INFO/WARNING/ERROR)
