@@ -1,0 +1,82 @@
+{
+  "cnap-knowledge-base": {
+    "settings": {
+      "index": {
+        "knn": true,
+        "knn.algo_param.ef_search": 100,
+        "number_of_shards": 1,
+        "number_of_replicas": 1
+      }
+    },
+    "mappings": {
+      "properties": {
+        "embedding": {
+          "type": "knn_vector",
+          "dimension": 768,
+          "method": {
+            "name": "hnsw",
+            "space_type": "cosinesimil",
+            "engine": "nmslib",
+            "parameters": {
+              "ef_construction": 128,
+              "m": 24
+            }
+          }
+        },
+        "text": { "type": "text" },
+        "source": { "type": "keyword" },
+        "chunk_index": { "type": "integer" },
+        "indexed_at": { "type": "date" }
+      }
+    }
+  },
+  "cwl-paloalto-traffic-template": {
+    "settings": {
+      "number_of_shards": 3,
+      "number_of_replicas": 1
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "action": { "type": "keyword" },
+        "srcip": { "type": "ip" },
+        "dstip": { "type": "ip" },
+        "dport": { "type": "integer" },
+        "sport": { "type": "integer" },
+        "proto": { "type": "keyword" },
+        "rule": { "type": "keyword" },
+        "app": { "type": "keyword" },
+        "category": { "type": "keyword" },
+        "severity": { "type": "keyword" },
+        "bytes": { "type": "long" },
+        "packets": { "type": "long" },
+        "session_end_reason": { "type": "keyword" },
+        "message": { "type": "text" }
+      }
+    }
+  },
+  "appgate-logs-template": {
+    "settings": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "type": { "type": "keyword" },
+        "user": { "type": "keyword" },
+        "device_id": { "type": "keyword" },
+        "device_posture_ok": { "type": "boolean" },
+        "source_ip": { "type": "ip" },
+        "result": { "type": "keyword" },
+        "reason": { "type": "keyword" },
+        "mfa_method": { "type": "keyword" },
+        "policy_name": { "type": "keyword" },
+        "entitlement": { "type": "keyword" },
+        "risk_score": { "type": "float" },
+        "geo_country": { "type": "keyword" },
+        "session_id": { "type": "keyword" }
+      }
+    }
+  }
+}

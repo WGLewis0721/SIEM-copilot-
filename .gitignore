@@ -1,0 +1,111 @@
+# =============================================================================
+# CNAP AI SIEM Copilot — .gitignore
+# NEVER commit credentials, secrets, or output data
+# =============================================================================
+
+# --- Secrets & Credentials ---
+.env
+*.pem
+*.key
+*.p12
+*.pfx
+.aws/credentials
+credentials.json
+secrets.json
+*_secret*
+*_password*
+*secret*.yaml
+*secret*.yml
+
+# --- Terraform ---
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+terraform/.terraform.tfstate.lock.info
+# Keep the example file
+!terraform/terraform.tfvars.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.env.test
+
+# --- Virtual Environments ---
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# --- Output / Reports ---
+docker/rag-agent/output/
+output/
+reports/
+*.analysis.txt
+*.analysis.json
+
+# --- Docker ---
+docker/open-webui/data/
+docker/dashboard/data/
+ollama-data/
+openwebui-data/
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# --- Editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Node (dashboard optional deps) ---
+node_modules/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+*.ipynb
