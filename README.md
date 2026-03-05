@@ -9,6 +9,7 @@ A production-grade **AI-powered Security Information and Event Management (SIEM)
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
+- [Concepts Covered](#concepts-covered)
 - [Prerequisites](#prerequisites)
 - [Quick Start (30 minutes)](#quick-start)
 - [Access Instructions](#access-instructions)
@@ -69,6 +70,53 @@ A production-grade **AI-powered Security Information and Event Management (SIEM)
 | Chat UI | Open WebUI | Interactive natural-language log queries |
 | Infrastructure | Terraform | EC2 on g4dn.xlarge or t3.xlarge |
 | Auth | AWS IAM roles | Zero credentials in code |
+
+---
+
+## Concepts Covered
+
+This repository is a working, production-grade reference for the following AI, DevOps, and Python programming concepts. Whether you are exploring the codebase to learn or to extend it, here is what you will find.
+
+### 🤖 Artificial Intelligence
+
+| Concept | Where it appears |
+|---------|-----------------|
+| **Retrieval-Augmented Generation (RAG)** | `docker/rag-agent/rag_pipeline.py` — the agent retrieves relevant runbook chunks from OpenSearch before calling the LLM, grounding responses in real operational context |
+| **Large Language Models (LLMs)** | Ollama runs `llama3.1:8b` locally on the EC2 instance; all inference stays on-premise with no data leaving the boundary |
+| **Vector Embeddings** | `nomic-embed-text` model converts security runbooks and log summaries into dense vectors stored in OpenSearch for similarity search |
+| **k-NN / Vector Similarity Search** | OpenSearch k-NN index used to find the top-K most relevant knowledge-base documents for each analysis cycle |
+| **Prompt Engineering** | `config/` prompt templates and the system prompt in `rag_pipeline.py` demonstrate how to structure LLM inputs for consistent, structured security reports |
+| **Real-Time LLM Filtering** | `docker/open-webui/functions/` — a custom Open WebUI inlet function detects log-query keywords and injects live OpenSearch context into chat prompts before they reach the LLM |
+| **Scheduled AI Analysis** | The RAG Agent runs on a configurable cron loop (default 30 minutes), demonstrating autonomous, event-driven AI workflows |
+
+### ⚙️ DevOps & Cloud Engineering
+
+| Concept | Where it appears |
+|---------|-----------------|
+| **Infrastructure as Code (IaC)** | `terraform/` — every AWS resource (EC2, IAM, S3, Security Groups) is defined in Terraform >= 1.6 with least-privilege policies |
+| **Docker & Docker Compose** | `docker/` — all services (Ollama, RAG Agent, Open WebUI, Dashboard) run as isolated containers orchestrated with a single `docker compose up` |
+| **Non-Root Container Security** | Every Dockerfile drops to a non-root `appuser` (UID 1000) before the entrypoint, following container hardening best practices |
+| **AWS IAM Instance Profiles** | Zero static credentials — the EC2 instance role is the only auth mechanism, consumed automatically by `boto3`'s credential chain |
+| **Zero-Trust Networking** | EC2 has no inbound Security Group rules; all operator access uses AWS SSM Session Manager port-forwarding (no SSH, no public IP) |
+| **IMDSv2 Enforcement** | Terraform sets `http_tokens = "required"` on all EC2 instances to prevent SSRF-based credential theft |
+| **AWS SigV4 Authentication** | OpenSearch requests are signed with AWS SigV4 via `opensearch-py` + `requests-aws4auth`, demonstrated in `opensearch_client.py` |
+| **S3-Backed Knowledge Base** | Runbooks and SOPs are stored in S3 and synced at runtime (`s3_knowledge.py`), showing a pattern for managing AI context in cloud storage |
+| **Health Checks & Observability** | `scripts/health-check.sh` shows how to validate multi-service Docker deployments; structured JSON logging is used throughout the Python services |
+
+### 🐍 Python Programming
+
+| Concept | Where it appears |
+|---------|-----------------|
+| **Python 3.11 Type Hints** | All function signatures use full type annotations (`from __future__ import annotations`), serving as a guide for modern, readable Python |
+| **Google-Style Docstrings** | Every public function and class carries a Google-style docstring, demonstrating professional API documentation standards |
+| **YAML + Environment Variable Configuration** | `config.yaml` provides defaults; environment variables always override them (see `env_map` in `main.py`), a common 12-factor app pattern |
+| **boto3 (AWS SDK)** | `opensearch_client.py` and `s3_knowledge.py` show IAM-authenticated AWS API calls without hardcoded credentials |
+| **OpenSearch Python Client** | Demonstrates index creation, k-NN mapping, bulk document indexing, and query DSL construction using dict structures (not string formatting) |
+| **Flask Web Framework** | `docker/dashboard/app.py` is a minimal Flask app that serves generated reports with path-traversal protection, a clean example of safe file serving |
+| **Structured JSON Logging** | `main.py`'s `JsonFormatter` shows how to emit machine-readable logs suitable for ingestion by log aggregators |
+| **pytest & Mocking** | `docker/rag-agent/tests/` covers all major code paths using `unittest.mock.patch` and `MagicMock` — no live AWS services required |
+| **Scheduled Background Tasks** | The main analysis loop in `main.py` demonstrates a production-safe Python scheduler pattern with configurable intervals and error recovery |
+| **Ruff + Black Code Quality** | The project enforces `ruff` (linting) and `black` (formatting, line length 100) — runnable with a single command from `docker/rag-agent/` |
 
 ---
 
