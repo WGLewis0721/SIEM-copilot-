@@ -16,6 +16,7 @@ A production-grade **AI-powered Security Information and Event Management (SIEM)
 - [Example Queries](#example-queries)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [Build with AI Assistance](#build-with-ai-assistance)
 
 ---
 
@@ -309,3 +310,122 @@ See [docs/troubleshooting.md](docs/troubleshooting.md) for detailed troubleshoot
 - Terraform: `terraform fmt` before committing
 - No secrets/credentials in any committed file
 - Every new directory needs a README.md
+
+---
+
+## Build with AI Assistance
+
+Want to adapt, extend, or rebuild this project with the help of an AI assistant? Copy any of the prompts below into **Claude**, **ChatGPT**, or **GitHub Copilot Chat** to get a head start. Feel free to tweak the details (cloud provider, log sources, instance type, etc.) to match your environment.
+
+---
+
+### 🟣 Full project bootstrap prompt
+
+Use this to ask an AI to scaffold the entire project from scratch, or to understand how all the pieces fit together.
+
+```
+I want to build a production-grade AI-powered SIEM Copilot that runs entirely on-premise inside AWS GovCloud (IL6).
+
+The system should:
+1. Ingest security logs from Palo Alto firewalls, AppGate SDP, and generic security event sources stored in AWS OpenSearch.
+2. Run a Python 3.11 RAG Agent every 30 minutes that:
+   - Queries OpenSearch for the latest logs using IAM/SigV4 authentication (no static credentials).
+   - Retrieves relevant security runbooks from an S3-backed knowledge base via vector similarity search (nomic-embed-text embeddings stored in an OpenSearch k-NN index).
+   - Calls a locally-hosted Ollama LLM (llama3.1:8b) to generate a structured threat-analysis report.
+   - Writes the report as a JSON file to a local output directory.
+3. Expose a Flask dashboard (port 5000) that serves the latest generated reports from the filesystem.
+4. Expose an Open WebUI chat interface (port 8080) with a custom inlet filter that detects log-query keywords, queries OpenSearch in real time, and injects enriched context into prompts before they reach the LLM.
+5. Deploy all services with Docker Compose; every container must run as a non-root user (UID 1000).
+6. Provision all AWS infrastructure (EC2 g4dn.xlarge, IAM role with least-privilege inline policies, S3 buckets, Security Groups with zero inbound rules) using Terraform >= 1.6 with IMDSv2 enforced.
+7. Provide operator access exclusively through AWS SSM Session Manager port-forwarding — no SSH keys, no public IPs.
+
+Please generate:
+- The complete directory structure.
+- The Python source files (main.py, rag_pipeline.py, opensearch_client.py, s3_knowledge.py, config.yaml).
+- Dockerfiles for the RAG Agent and Dashboard.
+- A docker-compose.yml that wires all services together.
+- Terraform files (main.tf, ec2.tf, iam.tf, s3.tf, security-groups.tf, variables.tf, outputs.tf).
+- A health-check.sh script.
+- pytest unit tests that mock all AWS/Ollama/OpenSearch calls.
+- A README with quick-start instructions.
+
+Follow these constraints:
+- Python: type hints on every function, Google-style docstrings, black (line length 100) + ruff formatting, from __future__ import annotations in every module.
+- No hardcoded credentials, endpoints, or secrets anywhere — use environment variables and IAM instance profiles.
+- Structured JSON logging via a custom JsonFormatter.
+- OpenSearch queries must use dict-based DSL (no raw string interpolation).
+- S3 and EBS encrypted at rest (AES-256); TLS 1.2+ in transit.
+```
+
+---
+
+### 🔵 Extend the RAG pipeline prompt
+
+Use this when you want to add new capabilities to the existing RAG Agent.
+
+```
+I have a Python RAG Agent (rag_pipeline.py) that:
+- Authenticates to AWS OpenSearch with SigV4.
+- Retrieves the top-K most similar runbook chunks from a k-NN index using nomic-embed-text embeddings.
+- Generates a security analysis report by calling Ollama (llama3.1:8b) with a structured prompt.
+
+I want to extend it to:
+[DESCRIBE YOUR EXTENSION HERE — for example:]
+- Add a severity scoring step that rates each detected anomaly 1–10 before writing the report.
+- Support a second LLM model (mistral:7b) as a fallback when llama3.1:8b is unavailable.
+- Cache the last 5 reports in memory and include a trend comparison in the prompt.
+- Emit Prometheus metrics (analysis duration, token count, anomaly count) to a /metrics endpoint.
+
+Please show me:
+1. The modified rag_pipeline.py with full type hints and Google-style docstrings.
+2. Any new dependencies to add to requirements.txt (with pinned version ranges, e.g., >=x.y,<x+1.0).
+3. Updated pytest unit tests in tests/test_rag_agent.py that mock all external calls.
+```
+
+---
+
+### 🟢 Infrastructure customization prompt
+
+Use this when you need to adapt the Terraform configuration for a different environment.
+
+```
+I have Terraform code that deploys an AI SIEM Copilot on AWS GovCloud with the following setup:
+- EC2 g4dn.xlarge with IMDSv2 enforced, no public IP, SSM-only access.
+- IAM instance profile with least-privilege inline policies for OpenSearch, S3, and SSM.
+- S3 buckets for knowledge base and report backups (AES-256 encryption).
+- Security Group with zero inbound rules.
+
+I want to modify it to:
+[DESCRIBE YOUR CHANGE HERE — for example:]
+- Add a second EC2 instance in a different availability zone with an ALB in front (internal only).
+- Replace S3 report storage with an EFS mount shared between both instances.
+- Add a CloudWatch alarm that triggers an SNS notification when the RAG Agent log stream contains "ERROR".
+- Tag all resources with CostCenter, Project, and Environment tags.
+
+Please generate the updated Terraform files, run terraform fmt style, and explain any IAM policy changes needed.
+```
+
+---
+
+### 🟡 Open WebUI filter customization prompt
+
+Use this to modify the chat interface's real-time log enrichment behavior.
+
+```
+I have a custom Open WebUI inlet filter (Python) that:
+- Detects log-query keywords in chat messages (e.g., "show logs", "blocked connections", "failed auth").
+- Queries AWS OpenSearch with SigV4 authentication to retrieve matching log entries.
+- Injects the retrieved log context into the LLM prompt before it is sent to Ollama.
+
+I want to change it so that:
+[DESCRIBE YOUR CHANGE HERE — for example:]
+- It also detects threat-intelligence keywords and enriches the prompt with entries from a local MITRE ATT&CK JSON file.
+- It limits injected log context to 2,000 tokens and summarizes longer results before injection.
+- It adds a citation footer to the LLM response showing which log index and time range was queried.
+
+Please provide the updated filter code with type hints, docstrings, and any necessary helper functions.
+```
+
+---
+
+> **Tip:** After pasting a prompt, review the AI's output carefully — especially IAM policies, Dockerfile `USER` directives, and any hardcoded values — before deploying to a production or classified environment.
